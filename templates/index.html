@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPS Alert Simulator</title>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap");
+
+        :root {
+            --bg: #0a1220;
+            --surface: #101c31;
+            --surface-soft: #13243f;
+            --line: #2b4364;
+            --text: #e6eef8;
+            --muted: #9cb1cb;
+            --ok: #22c55e;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --accent: #38bdf8;
+            --radius: 14px;
+            --shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+            background:
+                radial-gradient(900px 420px at 0% -10%, #1e3a63 0%, transparent 55%),
+                radial-gradient(900px 420px at 100% -10%, #183558 0%, transparent 55%),
+                var(--bg);
+            padding: 20px;
+        }
+
+        .app {
+            max-width: 1320px;
+            margin: 0 auto;
+            display: grid;
+            gap: 16px;
+        }
+
+        .panel {
+            background: linear-gradient(180deg, var(--surface) 0%, #0f1a2b 100%);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 16px;
+        }
+
+        .top {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .title h1 {
+            font-size: clamp(1.25rem, 2vw, 1.85rem);
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        .title p {
+            color: var(--muted);
+            margin-top: 6px;
+            font-size: 0.93rem;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .chip {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid #355174;
+            background: #132844;
+            color: #d6e5f8;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .ops-box {
+            display: grid;
+            gap: 8px;
+            background: #0f2139;
+            border: 1px dashed #3a5b83;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .ops-title { font-size: 0.9rem; font-weight: 700; color: #d8e7fb; }
+        .ops-line { font-size: 0.82rem; color: #bfd0e6; }
+
+        .flow {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 14px;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #dbe9fb;
+        }
+
+        .hint { font-size: 0.82rem; color: var(--muted); margin-bottom: 10px; }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button {
+            border: 1px solid #335176;
+            border-radius: 10px;
+            padding: 9px 11px;
+            cursor: pointer;
+            color: #e8f1fb;
+            background: #1a3558;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: 180ms ease;
+        }
+
+        button:hover { background: #23436f; transform: translateY(-1px); }
+        button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        button:focus-visible, input:focus-visible, select:focus-visible {
+            outline: 2px solid var(--warn);
+            outline-offset: 1px;
+        }
+
+        .btn-critical { background: #5e1f2d; border-color: #904156; }
+        .btn-reset { background: #5f3c6e; border-color: #84579c; }
+        .btn-active { box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.45) inset; }
+
+        .status-banner {
+            margin-top: 12px;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-weight: 700;
+            display: none;
+        }
+        .status-banner.ok {
+            display: block;
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            background: rgba(34, 197, 94, 0.15);
+            color: #d7ffe7;
+        }
+        .status-banner.alert {
+            display: block;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.16);
+            color: #ffdbe0;
+        }
+
+        .metrics {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+        }
+
+        .metric {
+            background: var(--surface-soft);
+            border: 1px solid #2a466a;
+            border-radius: 11px;
+            padding: 10px;
+            min-height: 82px;
+            display: grid;
+            gap: 5px;
+        }
+        .metric label { font-size: 0.75rem; color: var(--muted); }
+        .metric .v { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 1.18rem; }
+        .metric .u { font-size: 0.72rem; color: #bccce0; }
+
+        details {
+            margin-top: 12px;
+            border: 1px solid #2b4669;
+            border-radius: 10px;
+            background: #102238;
+            padding: 8px 10px;
+        }
+        details summary {
+            cursor: pointer;
+            font-weight: 700;
+            color: #d7e7fb;
+            font-size: 0.84rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 9px;
+            margin-top: 8px;
+        }
+        .field {
+            background: #11253d;
+            border: 1px solid #2d4c72;
+            border-radius: 10px;
+            padding: 9px;
+            display: grid;
+            gap: 5px;
+        }
+        .field label { font-size: 0.74rem; color: #c0d0e5; }
+        input, select {
+            width: 100%;
+            border: 1px solid #395980;
+            border-radius: 8px;
+            background: #0f1f34;
+            color: var(--text);
+            padding: 7px 8px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.79rem;
+        }
+
+        .zabbix-time {
+            display: grid;
+            gap: 8px;
+        }
+        .z-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .eta {
+            border: 1px solid #39628a;
+            background: #132a45;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 0.82rem;
+            color: #cfe0f5;
+        }
+        .eta strong { color: #ffe8cb; }
+
+        .oids {
+            max-height: 280px;
+            overflow: auto;
+            font-size: 0.81rem;
+        }
+        .oids code { color: #b8cff0; }
+
+        #status-message {
+            position: sticky;
+            bottom: 8px;
+            justify-self: end;
+            max-width: 420px;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: none;
+            font-size: 0.83rem;
+            border: 1px solid transparent;
+            box-shadow: var(--shadow);
+        }
+        #status-message.success {
+            display: block;
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.35);
+            color: #d7ffe8;
+        }
+        #status-message.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.16);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #ffe0e5;
+        }
+
+        @media (max-width: 1120px) {
+            .top, .flow { grid-template-columns: 1fr; }
+            .z-row { grid-template-columns: 1fr; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <section class="panel top">
+            <div class="title">
+                <h1>UPS Alert Simulator</h1>
+                <p>Interfaz para pruebas operativas SNMP y validacion rapida de triggers en Zabbix.</p>
+                <div class="chips">
+                    <span class="chip">SNMP v2c</span>
+                    <span class="chip">Community public</span>
+                    <span class="chip">UDP 161</span>
+                    <span class="chip" id="chip-active">Escenario: normal</span>
+                </div>
+            </div>
+            <div class="ops-box">
+                <div class="ops-title">Estado de prueba</div>
+                <div class="ops-line" id="ops-last-local">Ultimo update local: --:--:--</div>
+                <div class="ops-line" id="ops-last-alert">Ultima alerta aplicada: --:--:--</div>
+                <div class="ops-line">Tip: si Zabbix tarda, ajusta el delay del item SNMP.</div>
+            </div>
+        </section>
+
+        <section class="panel flow">
+            <div>
+                <div class="section-title">Paso 1 - Activar escenario</div>
+                <p class="hint">Usa botones rapidos para pruebas frecuentes. Las acciones criticas piden confirmacion.</p>
+                <div class="btn-row">
+                    <button class="btn-alert" onclick="setAlert('battery_low')">Battery Low</button>
+                    <button class="btn-alert" onclick="setAlert('on_battery')">On Battery</button>
+                    <button class="btn-alert" onclick="setAlert('output_off')">Output Off</button>
+                    <button class="btn-alert" onclick="setAlert('high_temperature')">High Temp</button>
+                    <button class="btn-alert btn-critical" onclick="setAlert('output_reboot')">Rebooting</button>
+                    <button class="btn-alert btn-critical" onclick="setAlert('output_emergency_bypass')">Emergency Bypass</button>
+                    <button class="btn-reset btn-critical" onclick="resetAlert()">Reset All</button>
+                </div>
+                <div id="alert-status" class="status-banner"></div>
+            </div>
+
+            <div class="zabbix-time">
+                <div class="section-title">Paso 2 - Tiempo esperado en Zabbix</div>
+                <p class="hint">Esta estimacion te ayuda a evitar reintentos innecesarios.</p>
+                <div class="z-row">
+                    <div class="field">
+                        <label>Delay item SNMP (seg)</label>
+                        <input type="number" id="z-delay" min="1" value="10">
+                    </div>
+                    <div class="field">
+                        <label>Ventana trigger (seg)</label>
+                        <input type="number" id="z-window" min="0" value="0">
+                    </div>
+                </div>
+                <div class="eta" id="z-eta">
+                    <strong>ETA trigger:</strong> aprox 10 seg (1 ciclo)
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="section-title">Paso 3 - Verificar estado UPS</div>
+            <p class="hint">KPIs clave para confirmar que el escenario se aplico correctamente.</p>
+            <div class="metrics">
+                <div class="metric"><label>UPS Status</label><div class="v" id="ups-status">--</div><div class="u" id="ups-status-text"></div></div>
+                <div class="metric"><label>Output Status</label><div class="v" id="output-status">--</div><div class="u" id="output-status-text"></div></div>
+                <div class="metric"><label>Battery %</label><div class="v" id="battery-capacity">--</div><div class="u">%</div></div>
+                <div class="metric"><label>Input Voltage</label><div class="v" id="input-voltage">--</div><div class="u">0.1V</div></div>
+                <div class="metric"><label>Battery Temp</label><div class="v" id="battery-temp">--</div><div class="u">0.1C</div></div>
+                <div class="metric"><label>Output Load</label><div class="v" id="output-load">--</div><div class="u">0.1%</div></div>
+            </div>
+
+            <details>
+                <summary>Ver metricas avanzadas</summary>
+                <div class="form-grid" style="margin-top:10px;">
+                    <div class="metric"><label>Output Voltage</label><div class="v" id="output-voltage">--</div><div class="u">0.1V</div></div>
+                    <div class="metric"><label>Battery Status</label><div class="v" id="battery-status">--</div><div class="u" id="battery-status-text"></div></div>
+                    <div class="metric"><label>Battery Replace</label><div class="v" id="battery-replace">--</div><div class="u" id="battery-replace-text"></div></div>
+                    <div class="metric"><label>Input Freq</label><div class="v" id="input-freq">--</div><div class="u">0.1Hz</div></div>
+                    <div class="metric"><label>Output Current</label><div class="v" id="output-current">--</div><div class="u">0.1A</div></div>
+                    <div class="metric"><label>Uptime</label><div class="v" id="system-uptime" style="font-size:0.92rem;">--</div><div class="u">centiseg</div></div>
+                </div>
+            </details>
+        </section>
+
+        <section class="panel">
+            <details>
+                <summary>Escenarios completos y modo personalizado</summary>
+                <div class="form-grid">
+                    <button class="btn-alert" onclick="setAlert('battery_replace')">Battery Replace</button>
+                    <button class="btn-alert" onclick="setAlert('voltage_high')">Voltage High</button>
+                    <button class="btn-alert" onclick="setAlert('voltage_low')">Voltage Low</button>
+                    <button class="btn-alert" onclick="setAlert('high_load')">High Load</button>
+                    <button class="btn-alert" onclick="setAlert('output_smart_boost')">Smart Boost</button>
+                    <button class="btn-alert" onclick="setAlert('output_smart_trim')">Smart Trim</button>
+                    <button class="btn-alert" onclick="setAlert('output_software_bypass')">Software Bypass</button>
+                    <button class="btn-alert btn-critical" onclick="setAlert('output_hardware_bypass')">Hardware Bypass</button>
+                    <button class="btn-alert" onclick="setAlert('output_timed_sleeping')">Timed Sleeping</button>
+                    <button class="btn-alert" onclick="setAlert('output_sleeping_power_return')">Sleep Until Power</button>
+                    <button class="btn-alert" onclick="setAlert('output_switched_bypass')">Switched Bypass</button>
+                    <button class="btn-alert" onclick="setAlert('system_restart')">System Restart</button>
+                </div>
+
+                <div class="form-grid" style="margin-top:10px;">
+                    <div class="field"><label>Battery %</label><input type="number" id="custom-battery" min="0" max="100" value="100"></div>
+                    <div class="field"><label>Input 0.1V</label><input type="number" id="custom-input-v" min="0" value="1200"></div>
+                    <div class="field"><label>Output 0.1V</label><input type="number" id="custom-output-v" min="0" value="1300"></div>
+                    <div class="field"><label>UPS Status (1-5)</label><input type="number" id="custom-ups-status" min="1" max="5" value="2"></div>
+                    <div class="field"><label>Output Status (1-16)</label><input type="number" id="custom-output-status" min="1" max="16" value="2"></div>
+                    <div class="field"><label>Battery Temp 0.1C</label><input type="number" id="custom-battery-temp" min="0" value="260"></div>
+                    <div class="field"><label>Output Load 0.1%</label><input type="number" id="custom-output-load" min="0" value="500"></div>
+                    <div class="field"><label>Uptime centiseg</label><input type="number" id="custom-uptime" min="0" value="8640000"></div>
+                    <div class="field"><label>Battery Replace (1/2)</label><input type="number" id="custom-battery-replace" min="1" max="2" value="1"></div>
+                </div>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="btn-alert" onclick="setAlert('custom')">Aplicar Custom</button>
+                </div>
+            </details>
+        </section>
+
+        <section class="panel">
+            <details>
+                <summary>Overrides manuales, config Zabbix y OIDs</summary>
+                <div class="form-grid">
+                    <div class="field"><label>Override Battery %</label><input type="number" id="override-battery" min="0" max="100" onchange="setOverride('custom_battery', this.value)"></div>
+                    <div class="field"><label>Override Input V</label><input type="number" id="override-input-v" min="0" onchange="setOverride('custom_input_voltage', this.value)"></div>
+                    <div class="field"><label>Override Output V</label><input type="number" id="override-output-v" min="0" onchange="setOverride('custom_output_voltage', this.value)"></div>
+                    <div class="field"><label>Override UPS Status</label><input type="number" id="override-ups-status" min="1" max="5" onchange="setOverride('ups_status_override', this.value)"></div>
+                    <div class="field"><label>Override Output Status</label><input type="number" id="override-output-status" min="1" max="16" onchange="setOverride('output_status_override', this.value)"></div>
+                    <div class="field"><label>Override Temp</label><input type="number" id="override-battery-temp" min="0" onchange="setOverride('battery_temperature_override', this.value)"></div>
+                    <div class="field"><label>Override Load</label><input type="number" id="override-output-load" min="0" onchange="setOverride('output_load_override', this.value)"></div>
+                    <div class="field"><label>Override Uptime</label><input type="number" id="override-uptime" min="0" onchange="setOverride('system_uptime_override', this.value)"></div>
+                    <div class="field"><label>Override Replace</label><input type="number" id="override-battery-replace" min="1" max="2" onchange="setOverride('battery_replace_indicator_override', this.value)"></div>
+                </div>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="btn-reset" onclick="clearOverrides()">Limpiar overrides</button>
+                </div>
+
+                <div class="form-grid" style="margin-top:14px;">
+                    <div class="field"><label>Servidor Zabbix</label><input type="text" id="zabbix-server" value="localhost"></div>
+                    <div class="field"><label>SNMP Trap Host</label><input type="text" id="zabbix-trap-host" value="localhost"></div>
+                    <div class="field"><label>SNMP Trap Port</label><input type="number" id="zabbix-trap-port" value="162"></div>
+                </div>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="btn-reset" onclick="updateZabbixConfig()">Guardar config</button>
+                </div>
+
+                <div class="oids" id="oid-list" style="margin-top:12px;">Cargando OIDs...</div>
+            </details>
+        </section>
+
+        <div id="status-message" role="status" aria-live="polite"></div>
+    </div>
+
+    <script>
+        const batteryStatusMap = { 1: "Unknown", 2: "Normal", 3: "Low", 4: "Fault" };
+        const upsStatusMap = { 1: "Unknown", 2: "Online", 3: "OnBattery", 4: "SmartBoost", 5: "SmartTrim" };
+        const outputStatusMap = {
+            1: "Unknown", 2: "Online", 3: "OnBattery", 4: "OnSmartBoost",
+            5: "TimedSleeping", 6: "SoftwareBypass", 7: "Off", 8: "Rebooting",
+            9: "SwitchedBypass", 10: "HardwareBypass", 11: "SleepUntilPower",
+            12: "OnSmartTrim", 16: "EmergencyBypass"
+        };
+        const replaceMap = { 1: "No Replace", 2: "Replace" };
+        const dangerousAlerts = new Set(["output_emergency_bypass", "output_hardware_bypass", "output_reboot"]);
+
+        let pendingRequest = false;
+        let activeAlertType = null;
+        let lastAlertAppliedAt = null;
+
+        function nowTimeText() {
+            return new Date().toLocaleTimeString("es-GT", { hour12: false });
+        }
+
+        function setPendingState(isPending) {
+            pendingRequest = isPending;
+            document.querySelectorAll("button").forEach((btn) => {
+                btn.disabled = isPending;
+            });
+        }
+
+        function renderOpsState() {
+            document.getElementById("ops-last-local").textContent = `Ultimo update local: ${nowTimeText()}`;
+            document.getElementById("ops-last-alert").textContent = `Ultima alerta aplicada: ${lastAlertAppliedAt || "--:--:--"}`;
+            document.getElementById("chip-active").textContent = `Escenario: ${activeAlertType || "normal"}`;
+        }
+
+        function highlightActiveAlert(alertType) {
+            document.querySelectorAll(".btn-alert").forEach((btn) => btn.classList.remove("btn-active"));
+            if (!alertType) return;
+            const target = document.querySelector(`button[onclick="setAlert('${alertType}')"]`);
+            if (target) target.classList.add("btn-active");
+        }
+
+        function updateEtaCard() {
+            const delay = parseInt(document.getElementById("z-delay").value || "10", 10);
+            const windowSec = parseInt(document.getElementById("z-window").value || "0", 10);
+            const eta = Math.max(1, delay) + Math.max(0, windowSec);
+            const cycles = Math.ceil(eta / Math.max(1, delay));
+            document.getElementById("z-eta").innerHTML = `<strong>ETA trigger:</strong> aprox ${eta} seg (${cycles} ciclo${cycles > 1 ? "s" : ""})`;
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch("/api/status");
+                const data = await res.json();
+
+                document.getElementById("battery-capacity").textContent = data.battery_capacity.toFixed(1);
+                document.getElementById("input-voltage").textContent = data.input_voltage;
+                document.getElementById("output-voltage").textContent = data.output_voltage;
+                document.getElementById("battery-status").textContent = data.battery_status;
+                document.getElementById("battery-status-text").textContent = batteryStatusMap[data.battery_status] || "Unknown";
+                document.getElementById("ups-status").textContent = data.ups_status;
+                document.getElementById("ups-status-text").textContent = upsStatusMap[data.ups_status] || "Unknown";
+                document.getElementById("output-status").textContent = data.output_status;
+                document.getElementById("output-status-text").textContent = outputStatusMap[data.output_status] || "Unknown";
+                document.getElementById("battery-temp").textContent = data.battery_temperature;
+                document.getElementById("output-load").textContent = data.output_load;
+                document.getElementById("battery-replace").textContent = data.battery_replace_indicator;
+                document.getElementById("battery-replace-text").textContent = replaceMap[data.battery_replace_indicator] || "Unknown";
+                document.getElementById("input-freq").textContent = data.input_frequency;
+                document.getElementById("output-current").textContent = data.output_current;
+                document.getElementById("system-uptime").textContent = formatUptime(data.system_uptime);
+
+                const alertBanner = document.getElementById("alert-status");
+                if (data.alert_active) {
+                    activeAlertType = data.alert_type;
+                    alertBanner.className = "status-banner alert";
+                    alertBanner.textContent = `ALERTA ACTIVA: ${data.alert_type}`;
+                } else {
+                    activeAlertType = null;
+                    alertBanner.className = "status-banner ok";
+                    alertBanner.textContent = "Estado normal - sin alertas";
+                }
+
+                highlightActiveAlert(activeAlertType);
+                renderOpsState();
+            } catch (e) {
+                showMessage("No se pudo actualizar estado", "error");
+            }
+        }
+
+        function formatUptime(cs) {
+            const sec = Math.floor(cs / 100);
+            const days = Math.floor(sec / 86400);
+            const hours = Math.floor((sec % 86400) / 3600);
+            const mins = Math.floor((sec % 3600) / 60);
+            if (days > 0) return `${days}d ${hours}h`;
+            return `${hours}h ${mins}m`;
+        }
+
+        async function setAlert(type) {
+            if (pendingRequest) return;
+            if (dangerousAlerts.has(type)) {
+                const ok = confirm("Accion critica para pruebas. Deseas continuar?");
+                if (!ok) return;
+            }
+
+            const payload = { type };
+            if (type === "custom") {
+                payload.custom_battery = parseFloat(document.getElementById("custom-battery").value) || null;
+                payload.custom_input_voltage = parseInt(document.getElementById("custom-input-v").value) || null;
+                payload.custom_output_voltage = parseInt(document.getElementById("custom-output-v").value) || null;
+                payload.ups_status_override = parseInt(document.getElementById("custom-ups-status").value) || null;
+                payload.output_status_override = parseInt(document.getElementById("custom-output-status").value) || null;
+                payload.battery_temperature_override = parseInt(document.getElementById("custom-battery-temp").value) || null;
+                payload.output_load_override = parseInt(document.getElementById("custom-output-load").value) || null;
+                payload.system_uptime_override = parseInt(document.getElementById("custom-uptime").value) || null;
+                payload.battery_replace_indicator_override = parseInt(document.getElementById("custom-battery-replace").value) || null;
+            }
+
+            try {
+                setPendingState(true);
+                const res = await fetch("/api/alerts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && (data.status === "applied" || data.status === "reset")) {
+                    lastAlertAppliedAt = nowTimeText();
+                    activeAlertType = type;
+                    highlightActiveAlert(activeAlertType);
+                    renderOpsState();
+                    showMessage("Alerta aplicada correctamente", "success");
+                    fetchStatus();
+                } else {
+                    showMessage(data.error || "Error aplicando alerta", "error");
+                }
+            } catch (e) {
+                showMessage("Error de conexion", "error");
+            } finally {
+                setPendingState(false);
+            }
+        }
+
+        async function resetAlert() {
+            if (pendingRequest) return;
+            const ok = confirm("Esto limpiara alertas y overrides. Continuar?");
+            if (!ok) return;
+            try {
+                setPendingState(true);
+                const res = await fetch("/api/alerts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reset: true })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === "reset") {
+                    activeAlertType = null;
+                    highlightActiveAlert(null);
+                    renderOpsState();
+                    showMessage("Alertas reseteadas", "success");
+                    fetchStatus();
+                } else {
+                    showMessage(data.error || "No se pudo resetear", "error");
+                }
+            } catch (e) {
+                showMessage("Error de conexion", "error");
+            } finally {
+                setPendingState(false);
+            }
+        }
+
+        async function setOverride(field, value) {
+            if (pendingRequest) return;
+            try {
+                setPendingState(true);
+                const res = await fetch("/api/override", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ field, value })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === "ok") {
+                    lastAlertAppliedAt = nowTimeText();
+                    activeAlertType = "custom";
+                    highlightActiveAlert(activeAlertType);
+                    renderOpsState();
+                    showMessage("Override aplicado", "success");
+                    fetchStatus();
+                } else {
+                    showMessage(data.error || "Override invalido", "error");
+                }
+            } catch (e) {
+                showMessage("Error aplicando override", "error");
+            } finally {
+                setPendingState(false);
+            }
+        }
+
+        async function clearOverrides() {
+            if (pendingRequest) return;
+            try {
+                setPendingState(true);
+                const res = await fetch("/api/alerts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reset: true })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === "reset") {
+                    showMessage("Overrides limpiados", "success");
+                    document.querySelectorAll(".field input[id^='override-']").forEach((input) => input.value = "");
+                    fetchStatus();
+                } else {
+                    showMessage(data.error || "No se pudieron limpiar", "error");
+                }
+            } catch (e) {
+                showMessage("Error limpiando overrides", "error");
+            } finally {
+                setPendingState(false);
+            }
+        }
+
+        async function updateZabbixConfig() {
+            if (pendingRequest) return;
+            const payload = {
+                server: document.getElementById("zabbix-server").value,
+                snmp_trap_host: document.getElementById("zabbix-trap-host").value,
+                snmp_trap_port: parseInt(document.getElementById("zabbix-trap-port").value)
+            };
+            try {
+                setPendingState(true);
+                const res = await fetch("/api/zabbix/config", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.status === "ok") {
+                    showMessage("Configuracion guardada", "success");
+                } else {
+                    showMessage(data.error || "Error guardando configuracion", "error");
+                }
+            } catch (e) {
+                showMessage("Error guardando configuracion", "error");
+            } finally {
+                setPendingState(false);
+            }
+        }
+
+        async function loadOids() {
+            try {
+                const res = await fetch("/api/oids");
+                const data = await res.json();
+                const container = document.getElementById("oid-list");
+                let html = "<table style='width:100%; text-align:left; border-collapse:collapse;'>";
+                html += "<tr><th style='padding:6px;border-bottom:1px solid #35567f;'>Nombre</th><th style='padding:6px;border-bottom:1px solid #35567f;'>OID</th></tr>";
+                for (const [oid, name] of Object.entries(data)) {
+                    html += `<tr><td style='padding:6px;border-bottom:1px solid #223b5c;'>${name}</td><td style='padding:6px;border-bottom:1px solid #223b5c;'><code>${oid}</code></td></tr>`;
+                }
+                html += "</table>";
+                container.innerHTML = html;
+            } catch (e) {
+                document.getElementById("oid-list").textContent = "Error cargando OIDs";
+            }
+        }
+
+        function showMessage(text, type) {
+            const el = document.getElementById("status-message");
+            el.textContent = text;
+            el.className = type;
+            setTimeout(() => { el.className = ""; }, 3000);
+        }
+
+        fetchStatus();
+        loadOids();
+        renderOpsState();
+        updateEtaCard();
+        document.getElementById("z-delay").addEventListener("input", updateEtaCard);
+        document.getElementById("z-window").addEventListener("input", updateEtaCard);
+        setInterval(fetchStatus, 2000);
+    </script>
+</body>
+</html>

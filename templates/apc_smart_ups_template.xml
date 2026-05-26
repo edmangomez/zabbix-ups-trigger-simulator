@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>5.4</version>
+    <date>2026-04-08T17:00:00Z</date>
+    <groups>
+        <group>
+            <name>Templates/Power</name>
+        </group>
+    </groups>
+    <templates>
+        <template>
+            <uuid>simulador-ups-alertas-001</uuid>
+            <template>APC UPS Simulator</template>
+            <name>APC UPS Simulator</name>
+            <description>Template for SNMP UPS Simulator with alert testing capabilities.
+
+OIDs implemented:
+- Battery Capacity: 1.3.6.1.4.1.318.1.1.1.2.2.1.0
+- Input Voltage: 1.3.6.1.4.1.318.1.1.1.3.2.1.0
+- Output Voltage: 1.3.6.1.4.1.318.1.1.1.4.2.1.0
+- Battery Status: 1.3.6.1.4.1.318.1.1.1.2.1.1.0
+- UPS Status: 1.3.6.1.4.1.318.1.1.1.1.1.0
+
+Alerts (via web UI):
+- battery_low: battery &lt; 20%, batteryStatus = 3
+- voltage_high: input &gt; 130V
+- voltage_low: input &lt; 100V
+- on_battery: upsStatus = 3</description>
+            <groups>
+                <group>
+                    <name>Templates/Power</name>
+                </group>
+            </groups>
+            <items>
+                <item>
+                    <uuid>battery-capacity-item-001</uuid>
+                    <name>Battery Capacity</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>1.3.6.1.4.1.318.1.1.1.2.2.1.0</snmp_oid>
+                    <key>battery.capacity</key>
+                    <delay>10s</delay>
+                    <history>7d</history>
+                    <trends>7d</trends>
+                    <value_type>FLOAT</value_type>
+                    <units>%</units>
+                    <description>Remaining battery capacity expressed as percentage of full capacity.</description>
+                    <tags>
+                        <tag>
+                            <name>Status</name>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>battery-low-trigger-001</uuid>
+                            <expression>last(/APC UPS Simulator/battery.capacity)&lt;20</expression>
+                            <name>Battery has low capacity (below 20%)</name>
+                            <opdata>Current capacity: {ITEM.LASTVALUE1}%</opdata>
+                            <priority>HIGH</priority>
+                            <description>Battery capacity is below 20%. UPS may lose power soon.</description>
+                            <manual_close>YES</manual_close>
+                        </trigger>
+                        <trigger>
+                            <uuid>battery-critical-trigger-002</uuid>
+                            <expression>last(/APC UPS Simulator/battery.capacity)&lt;10</expression>
+                            <name>Battery capacity critical (below 10%)</name>
+                            <opdata>Current capacity: {ITEM.LASTVALUE1}%</opdata>
+                            <priority>DISASTER</priority>
+                            <description>Battery capacity is critical. UPS will shut down soon.</description>
+                            <manual_close>YES</manual_close>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>input-voltage-item-002</uuid>
+                    <name>Input Voltage</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>1.3.6.1.4.1.318.1.1.1.3.2.1.0</snmp_oid>
+                    <key>input.voltage</key>
+                    <delay>10s</delay>
+                    <history>7d</history>
+                    <trends>7d</trends>
+                    <value_type>FLOAT</value_type>
+                    <units>V</units>
+                    <description>Current utility line voltage in VAC.</description>
+                    <tags>
+                        <tag>
+                            <name>Status</name>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>input-voltage-high-trigger-001</uuid>
+                            <expression>last(/APC UPS Simulator/input.voltage)&gt;130</expression>
+                            <name>Input voltage too high (above 130V)</name>
+                            <opdata>Current voltage: {ITEM.LASTVALUE1}V</opdata>
+                            <priority>HIGH</priority>
+                            <description>Input voltage is above acceptable range (&gt;130V).</description>
+                            <manual_close>YES</manual_close>
+                        </trigger>
+                        <trigger>
+                            <uuid>input-voltage-low-trigger-002</uuid>
+                            <expression>last(/APC UPS Simulator/input.voltage)&lt;100</expression>
+                            <name>Input voltage too low (below 100V)</name>
+                            <opdata>Current voltage: {ITEM.LASTVALUE1}V</opdata>
+                            <priority>HIGH</priority>
+                            <description>Input voltage is below acceptable range (&lt;100V).</description>
+                            <manual_close>YES</manual_close>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>output-voltage-item-003</uuid>
+                    <name>Output Voltage</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>1.3.6.1.4.1.318.1.1.1.4.2.1.0</snmp_oid>
+                    <key>output.voltage</key>
+                    <delay>10s</delay>
+                    <history>7d</history>
+                    <trends>7d</trends>
+                    <value_type>FLOAT</value_type>
+                    <units>V</units>
+                    <description>Output voltage of the UPS system in VAC.</description>
+                    <tags>
+                        <tag>
+                            <name>Status</name>
+                        </tag>
+                    </tags>
+                </item>
+                <item>
+                    <uuid>battery-status-item-004</uuid>
+                    <name>Battery Status</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>1.3.6.1.4.1.318.1.1.1.2.1.1.0</snmp_oid>
+                    <key>battery.status</key>
+                    <delay>10s</delay>
+                    <history>7d</history>
+                    <trends>7d</trends>
+                    <value_type>UNSIGNED</value_type>
+                    <description>Status of the UPS batteries.
+1=Unknown, 2=Normal, 3=Low, 4=Fault</description>
+                    <valuemap>
+                        <name>UPS Battery Status</name>
+                    </valuemap>
+                    <tags>
+                        <tag>
+                            <name>Status</name>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>battery-status-low-trigger-001</uuid>
+                            <expression>last(/APC UPS Simulator/battery.status)=3</expression>
+                            <name>Battery is Low</name>
+                            <priority>AVERAGE</priority>
+                            <description>The UPS will be unable to sustain the current load.</description>
+                            <manual_close>YES</manual_close>
+                        </trigger>
+                        <trigger>
+                            <uuid>battery-status-fault-trigger-002</uuid>
+                            <expression>last(/APC UPS Simulator/battery.status)=4</expression>
+                            <name>Battery has fault condition</name>
+                            <priority>HIGH</priority>
+                            <description>A battery installed has an internal error condition.</description>
+                            <manual_close>YES</manual_close>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>ups-status-item-005</uuid>
+                    <name>UPS Status</name>
+                    <type>SNMP_AGENT</type>
+                    <snmp_oid>1.3.6.1.4.1.318.1.1.1.1.1.0</snmp_oid>
+                    <key>ups.status</key>
+                    <delay>10s</delay>
+                    <history>7d</history>
+                    <trends>7d</trends>
+                    <value_type>UNSIGNED</value_type>
+                    <description>Current state of the UPS.
+1=Unknown, 2=Online, 3=OnBattery, 4=OnSmartBoost, 5=OnSmartTrim</description>
+                    <valuemap>
+                        <name>UPS Status</name>
+                    </valuemap>
+                    <tags>
+                        <tag>
+                            <name>Status</name>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>ups-status-onbattery-trigger-001</uuid>
+                            <expression>last(/APC UPS Simulator/ups.status)=3</expression>
+                            <name>UPS is on battery</name>
+                            <opdata>Current status: OnBattery</opdata>
+                            <priority>AVERAGE</priority>
+                            <description>UPS is running on battery power. Power utility has failed.</description>
+                            <manual_close>YES</manual_close>
+                        </trigger>
+                    </triggers>
+                </item>
+                <item>
+                    <uuid>snmp-available-item-006</uuid>
+                    <name>SNMP agent availability</name>
+                    <type>INTERNAL</type>
+                    <key>zabbix[host,snmp,available]</key>
+                    <history>7d</history>
+                    <valuemap>
+                        <name>zabbix.host.available</name>
+                    </valuemap>
+                    <tags>
+                        <tag>
+                            <name>Status</name>
+                        </tag>
+                    </tags>
+                    <triggers>
+                        <trigger>
+                            <uuid>snmp-unavailable-trigger-001</uuid>
+                            <expression>max(/APC UPS Simulator/zabbix[host,snmp,available],30)=0</expression>
+                            <name>No SNMP data collection</name>
+                            <opdata>Current state: {ITEM.LASTVALUE1}</opdata>
+                            <priority>WARNING</priority>
+                            <description>SNMP is not available. Check connectivity and SNMP settings.</description>
+                            <manual_close>YES</manual_close>
+                        </trigger>
+                    </triggers>
+                </item>
+            </items>
+            <valuemaps>
+                <valuemap>
+                    <name>UPS Battery Status</name>
+                    <mappings>
+                        <mapping>
+                            <value>1</value>
+                            <newvalue>Unknown</newvalue>
+                        </mapping>
+                        <mapping>
+                            <value>2</value>
+                            <newvalue>Normal</newvalue>
+                        </mapping>
+                        <mapping>
+                            <value>3</value>
+                            <newvalue>Low</newvalue>
+                        </mapping>
+                        <mapping>
+                            <value>4</value>
+                            <newvalue>Fault</newvalue>
+                        </mapping>
+                    </mappings>
+                </valuemap>
+                <valuemap>
+                    <name>UPS Status</name>
+                    <mappings>
+                        <mapping>
+                            <value>1</value>
+                            <newvalue>Unknown</newvalue>
+                        </mapping>
+                        <mapping>
+                            <value>2</value>
+                            <newvalue>Online</newvalue>
+                        </mapping>
+                        <mapping>
+                            <value>3</value>
+                            <newvalue>OnBattery</newvalue>
+                        </mapping>
+                        <mapping>
+                            <value>4</value>
+                            <newvalue>OnSmartBoost</newvalue>
+                        </mapping>
+                        <mapping>
+                            <value>5</value>
+                            <newvalue>OnSmartTrim</newvalue>
+                        </mapping>
+                    </mappings>
+                </valuemap>
+            </valuemaps>
+        </template>
+    </templates>
+    <triggers>
+    </triggers>
+</zabbix_export>

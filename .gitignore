@@ -215,4 +215,8 @@ marimo/_lsp/
 __marimo__/
 
 # Streamlit
+.claude/
+.opencode/
+__pycache__/
+*.pyc
 .streamlit/secrets.toml

@@ -1,0 +1,226 @@
+zabbix_export:
+  version: '5.4'
+  date: '2026-04-08T18:00:00Z'
+  groups:
+    -
+      uuid: 3dcd5bbe90534f9e8eb5c2d53756af63
+      name: Templates/Power
+  templates:
+    -
+      uuid: 3ec55c9966624ef5bc1b50502812d581
+      template: 'APC UPS Simulator v2'
+      name: 'APC UPS Simulator v2'
+      description: |
+        Template for SNMP UPS Simulator with alert testing capabilities.
+        
+        OIDs implemented:
+        - Battery Capacity: 1.3.6.1.4.1.318.1.1.1.2.2.1.0
+        - Input Voltage: 1.3.6.1.4.1.318.1.1.1.3.2.1.0
+        - Output Voltage: 1.3.6.1.4.1.318.1.1.1.4.2.1.0
+        - Battery Status: 1.3.6.1.4.1.318.1.1.1.2.1.1.0
+        - UPS Status: 1.3.6.1.4.1.318.1.1.1.1.1.0
+        
+        Alerts (via web UI):
+        - battery_low: battery < 20%, batteryStatus = 3
+        - voltage_high: input > 130V
+        - voltage_low: input < 100V
+        - on_battery: upsStatus = 3
+      groups:
+        -
+          name: Templates/Power
+      items:
+        -
+          uuid: 96898d48b27946bfa9a623d7d0b028be
+          name: 'Battery Capacity'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.318.1.1.1.2.2.1.0
+          key: battery.capacity
+          delay: 10s
+          history: 7d
+          trends: 7d
+          value_type: FLOAT
+          units: '%'
+          description: Remaining battery capacity expressed as percentage of full capacity.
+          tags:
+            -
+              tag: Status
+          triggers:
+            -
+              uuid: aa0bbfb321d440438fb421825f23e140
+              expression: 'last(/APC UPS Simulator v2/battery.capacity)<20'
+              name: 'Battery has low capacity (below 20%)'
+              opdata: 'Current capacity: {ITEM.LASTVALUE1}%'
+              priority: HIGH
+              description: Battery capacity is below 20%. UPS may lose power soon.
+              manual_close: 'YES'
+            -
+              uuid: c4dccc96218448d696952f6ea5d1f24b
+              expression: 'last(/APC UPS Simulator v2/battery.capacity)<10'
+              name: 'Battery capacity critical (below 10%)'
+              opdata: 'Current capacity: {ITEM.LASTVALUE1}%'
+              priority: DISASTER
+              description: Battery capacity is critical. UPS will shut down soon.
+              manual_close: 'YES'
+        -
+          uuid: de84a2fbbb464023a7b73e01895a9e9d
+          name: 'Input Voltage'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.318.1.1.1.3.2.1.0
+          key: input.voltage
+          delay: 10s
+          history: 7d
+          trends: 7d
+          value_type: FLOAT
+          units: V
+          description: Current utility line voltage in VAC.
+          tags:
+            -
+              tag: Status
+          triggers:
+            -
+              uuid: f6527c4fed3d41168be23f9367f18405
+              expression: 'last(/APC UPS Simulator v2/input.voltage)>130'
+              name: 'Input voltage too high (above 130V)'
+              opdata: 'Current voltage: {ITEM.LASTVALUE1}V'
+              priority: HIGH
+              description: Input voltage is above acceptable range (>130V).
+              manual_close: 'YES'
+            -
+              uuid: 1ddd2699b87f452a8893f75f805c0a81
+              expression: 'last(/APC UPS Simulator v2/input.voltage)<100'
+              name: 'Input voltage too low (below 100V)'
+              opdata: 'Current voltage: {ITEM.LASTVALUE1}V'
+              priority: HIGH
+              description: Input voltage is below acceptable range (<100V).
+              manual_close: 'YES'
+        -
+          uuid: 37d7eda5664c4ae2b4a126c60a8eb40b
+          name: 'Output Voltage'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.318.1.1.1.4.2.1.0
+          key: output.voltage
+          delay: 10s
+          history: 7d
+          trends: 7d
+          value_type: FLOAT
+          units: V
+          description: Output voltage of the UPS system in VAC.
+          tags:
+            -
+              tag: Status
+        -
+          uuid: f4106603e47e40548592d60a7b8b3148
+          name: 'Battery Status'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.318.1.1.1.2.1.1.0
+          key: battery.status
+          delay: 10s
+          history: 7d
+          trends: 7d
+          value_type: UNSIGNED
+          description: |
+            Status of the UPS batteries.
+            1=Unknown, 2=Normal, 3=Low, 4=Fault
+          valuemap:
+            name: 'UPS Battery Status'
+          tags:
+            -
+              tag: Status
+          triggers:
+            -
+              uuid: aa1bbfb321d440438fb421825f23e141
+              expression: 'last(/APC UPS Simulator v2/battery.status)=3'
+              name: 'Battery status: Low detected'
+              priority: AVERAGE
+              description: The UPS will be unable to sustain the current load.
+              manual_close: 'YES'
+            -
+              uuid: 1282326bb61d45d88671bbbde3fab8ff
+              expression: 'last(/APC UPS Simulator v2/battery.status)=4'
+              name: 'Battery has fault condition'
+              priority: HIGH
+              description: A battery installed has an internal error condition.
+              manual_close: 'YES'
+        -
+          uuid: c17c7fd7e6504592869dc14c4a002254
+          name: 'UPS Status'
+          type: SNMP_AGENT
+          snmp_oid: 1.3.6.1.4.1.318.1.1.1.1.1.0
+          key: ups.status
+          delay: 10s
+          history: 7d
+          trends: 7d
+          value_type: UNSIGNED
+          description: |
+            Current state of the UPS.
+            1=Unknown, 2=Online, 3=OnBattery, 4=OnSmartBoost, 5=OnSmartTrim
+          valuemap:
+            name: 'UPS Status'
+          tags:
+            -
+              tag: Status
+          triggers:
+            -
+              uuid: b0330f707fc64605934ed95233bd2246
+              expression: 'last(/APC UPS Simulator v2/ups.status)=3'
+              name: 'UPS is on battery'
+              opdata: 'Current status: OnBattery'
+              priority: AVERAGE
+              description: UPS is running on battery power. Power utility has failed.
+              manual_close: 'YES'
+        -
+          uuid: ca3275f69f3c4e7c9c71108451c0b64f
+          name: 'SNMP agent availability'
+          type: INTERNAL
+          key: 'zabbix[host,snmp,available]'
+          history: 7d
+          valuemap:
+            name: zabbix.host.available
+          tags:
+            -
+              tag: Status
+          triggers:
+            -
+              uuid: 4572d871f1d944bb855b93fdc6de5e88
+              expression: 'max(/APC UPS Simulator v2/zabbix[host,snmp,available],30)=0'
+              name: 'No SNMP data collection'
+              opdata: 'Current state: {ITEM.LASTVALUE1}'
+              priority: WARNING
+              description: SNMP is not available. Check connectivity and SNMP settings.
+              manual_close: 'YES'
+      valuemaps:
+        -
+          uuid: eb74b3671b4d4335ad92bd3b027547b0
+          name: 'UPS Battery Status'
+          mappings:
+            -
+              value: '1'
+              newvalue: Unknown
+            -
+              value: '2'
+              newvalue: Normal
+            -
+              value: '3'
+              newvalue: Low
+            -
+              value: '4'
+              newvalue: Fault
+        -
+          uuid: 0ae99a18a5c24fb0b812353d25459e1f
+          name: 'UPS Status'
+          mappings:
+            -
+              value: '1'
+              newvalue: Unknown
+            -
+              value: '2'
+              newvalue: Online
+            -
+              value: '3'
+              newvalue: OnBattery
+            -
+              value: '4'
+              newvalue: OnSmartBoost
+            -
+              value: '5'
+              newvalue: OnSmartTrim
