@@ -1,4 +1,4 @@
-# zabbix-ups-trigger-simulator
+# zabbix UPS Trigger Simulator
 
 Flask + SNMPv2c simulator for APC Smart-UPS (PowerNet MIB), focused on fast Zabbix trigger testing in lab environments.
 
